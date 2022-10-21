@@ -1,0 +1,18 @@
+ #include <stdio.h>
+#include "SpiceUsr.h"
+
+#define  FILSIZ         256
+#define  MAXIV          1000
+#define  WINSIZ         ( 2 * MAXIV )
+#define  TIMLEN         51
+#define  MAXOBJ         1000
+
+int main()
+{
+
+  SPICEDOUBLE_CELL        ( cover, WINSIZ );
+  SPICEINT_CELL           ( ids,   MAXOBJ );
+
+  SpiceChar               lsk     [ FILSIZ ];
+  SpiceChar               spk     [ FILSIZ ];
+  SpiceChar               timstr  [ TIMLEN ];

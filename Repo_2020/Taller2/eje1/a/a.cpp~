@@ -1,0 +1,76 @@
+#include <cmath>
+#include <iostream>
+#include "Random64.h"
+
+const int Lx=256;
+const int Ly=256;
+
+
+
+class LatticaGas
+{
+private:
+  int position[2]={0,0}; int p0=0, p=0;  double mux=0, muy=0;
+  
+public:
+  
+  void inicie(double p0,double p,Crandom &ran64,double mux,double muy,double sigma);
+  void move(Crandom &ran64);
+  //int Getr(void){return std::hypot(position[0]-mux,position[1]-muy);};
+  
+};
+void LatticeGas::inicie(double P0,double P,Crandom &ran64,double Mux,double Muy,double sigma)
+{
+  p0=P0; p=P; mux=Mux; muy=Muy;
+  
+  int  ix=(int) ran64.gauss(mux,sigma); if(ix<0) ix=0; if(ix>(Lx-1)) ix=Lx-1;
+  int  iy=(int) ran64.gauss(muy,sigma); if(iy<0) iy=0; if(iy>(Ly-1)) ix=Ly-1;
+  
+  position[0]=ix; position[1]=ix;
+}
+void LatticeGas::move(Crandom &ran64)
+{
+  double i= ran64.();
+  if(i<=p0)
+    position[0]+=1;
+  if(i>p0 and i<=p0+p)
+    position[1]+=1;
+  if(i>p0+p and i<=p0+2*p)
+    position[0]-=1;
+  if(i>p0+2*p)
+    position[1]-=1;
+  for(int j=0; j<2; j++)
+    {
+      if (position[j]==0)
+	position[j]=Lx*(1-j)+Ly*j;
+      if(position[j]==Lx*(1-j)+Ly*j)
+	position[j]=1;
+    } 
+}
+
+int main(void)
+{
+  int N=10;
+  double p0=0.25;
+  double p=0.25;
+  LatticeGas Difusion[N];
+  int t, tmax=350;
+  Crandom ran64(2);
+  double mux=Lx/2, muy=Ly/2, sigma=16;
+
+  for(int k=0; k<N; k++)
+    Difusion[k].inicie(p0,p,ran64,mux,muy,sigma);
+
+  for(int t=0; t<=tmax; t++)
+    {
+      for(int k=0; k<N; k++)
+	{
+	  Difusion[k].move;
+
+	}
+    }
+
+
+
+  return 0;
+}

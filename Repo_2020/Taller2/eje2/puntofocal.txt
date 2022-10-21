@@ -1,0 +1,2 @@
+awk -v m="$(awk '(NR>1 && $3>m){m=$3};END{print m}' Ondas.dat)"  '$3==m' Ondas.dat
+105 100 7.09594

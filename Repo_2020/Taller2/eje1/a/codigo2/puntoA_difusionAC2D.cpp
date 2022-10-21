@@ -1,0 +1,138 @@
+#include <cmath>
+#include "Random64.h"
+using namespace std;
+
+const int Lx = 256, Ly = 256, Q = 4;
+const double p0 = 0.25, p = 0.25;
+
+//--------------------- Clase LatticeGas ------------
+// V[][i]: 0 = centro, 1 = arriba, 2 = derecha, 3 = abajo, 4 = izquierda
+class LatticeGas{
+private:
+	int V[2][Q], n[Lx][Ly][Q], nnew[Lx][Ly][Q];
+public:
+	LatticeGas();
+	void Inicie(int N, double mu, double sigma, Crandom & ran64);
+	void Show(bool ShowNew);
+	void Colisione(Crandom & ran64);
+	void Adveccione();
+	double GetSigma2();
+};
+
+LatticeGas::LatticeGas(){
+	V[0][0] = 0;				//Vx = V[0]
+	V[0][1] = 1;
+	V[0][2] = 0;
+	V[0][3] = -1;
+	V[1][0] = 1;				//Vy = V[1]
+	V[1][1] = 0;
+	V[1][2] = -1;
+	V[1][3] = 0;
+	for(int ix = 0; ix < Lx; ix++)
+	  for(int iy = 0; iy < Ly; iy++)
+	    for(int i = 0; i < Q; i++) n[ix][iy][i] = nnew[ix][iy][i] = 0;
+}
+
+void LatticeGas::Inicie(int N, double mu, double sigma, Crandom & ran64){
+	int ix, iy, i;
+	do{
+		ix = (int) ran64.gauss(mu,sigma);
+		iy = (int) ran64.gauss(mu,sigma);
+		if(ix < 0 || iy < 0) ix = iy = 0;
+		if(ix > (Lx - 1)) ix = Lx - 1;
+		if(iy > (Ly - 1)) iy = Ly - 1;
+		i = (int) Q*ran64.r();
+		if(n[ix][iy][i] == 0){
+			n[ix][iy][i] = 1;
+			N--;
+		}
+	}while(N > 0);
+}
+
+void LatticeGas::Show(bool ShowNew){
+
+  for(int i=0;i<2;i++){
+    for(int ix=0;ix<Lx;ix++)
+      if(ShowNew) cout<<nnew[ix][i]; else cout<<n[ix][i];
+    cout<<endl;
+  }
+  cout<<endl;
+}
+
+void LatticeGas::Colisione(Crandom & ran64){
+	for(int ix = 0; ix < Lx; ix++){
+		for(int iy = 0; iy < Ly; iy++){							//para cada celda
+			if(ran64.r() >= 0 && ran64.r() < p0){				//con probabilidad p0
+				nnew[ix][iy][0] = n[ix][iy][0];
+				nnew[ix][iy][1] = n[ix][iy][1];
+				nnew[ix][iy][2] = n[ix][iy][2];
+				nnew[ix][iy][3] = n[ix][iy][3];
+			}													//dejelo igual.
+			else if(ran64.r() >= p0 && ran64.r() < p){			//con probabilidad p
+				nnew[ix][iy][0] = n[ix][iy][3];
+				nnew[ix][iy][1] = n[ix][iy][0];
+				nnew[ix][iy][2] = n[ix][iy][1];
+				nnew[ix][iy][3] = n[ix][iy][2];
+			}														//girar 180 grados.
+			else if(ran64.r() >= p && ran64.r() < (1 - 2*p - p0)){	//con 1 -2*p - p0
+				nnew[ix][iy][0] = n[ix][iy][2];
+				nnew[ix][iy][1] = n[ix][iy][3];
+				nnew[ix][iy][2] = n[ix][iy][0];
+				nnew[ix][iy][3] = n[ix][iy][1];
+			}													//girar 270 grados.
+			else{  //con probabilidad 1-p
+				nnew[ix][iy][0] = n[ix][iy][1];
+				nnew[ix][iy][1] = n[ix][iy][2];
+				nnew[ix][iy][2] = n[ix][iy][3];
+				nnew[ix][iy][3] = n[ix][iy][0];
+			}
+		}
+	}
+}
+
+void LatticeGas::Adveccione(){									//fronteras periódicas
+	for(int ix = 0; ix < Lx; ix++)
+		for(int iy = 0; iy < Ly; iy++) 							//para cada celda
+			for(int i = 0; i < 4; i++)
+				n[(ix + V[0][i] + Lx)%Lx][(iy + V[1][i] + Ly)%Ly][i] = nnew[ix][iy][i];
+}
+
+double LatticeGas::GetSigma2(){
+	double ixprom, suma, N;
+	int ix, iy;
+	//Calcular N
+	for(N = 0, ix = 0; ix < Lx; ix++)
+		for(iy = 0; iy < Ly; iy++)
+			N += n[ix][iy][0] + n[ix][iy][1] + n[ix][iy][2] + n[ix][iy][3];
+	//Calcular ixprom
+	for(suma = 0, ix = 0; ix < Lx; ix++)
+	  for(iy = 0; iy < Ly; iy++)
+	    suma += (n[ix][iy][0] + n[ix][iy][1] )+( n[ix][iy][2] + n[ix][iy][3]);
+	ixprom = suma/N;
+	//Calcular sigma2
+	for(suma = 0, ix = 0; ix < Lx; ix++)
+	  for(iy = 0; iy < Ly; iy++)
+			suma += pow(ix - ixprom, 2) + pow(iy - ixprom, 2);
+	return suma/(N - 1);
+	//return 0;
+}
+
+//------------------- Funciones Globales ------------
+int main(void){
+	LatticeGas Difusion;
+	Crandom ran64(1);
+	int t, tmax = 350;
+	int N = 2400;
+	double mu = Lx/2,
+			 sigma = Lx/16;
+	//Inicie
+	Difusion.Inicie(N, mu, sigma, ran64);
+	//Corra
+	for(t = 0; t < tmax; t++){
+		Difusion.Colisione(ran64);
+		Difusion.Adveccione();
+		if(t%10==0)
+		  cout<<t<<" "<<Difusion.GetSigma2()<<endl;
+	}
+	return 0;
+}  

@@ -1,0 +1,63 @@
+#include <cmath>
+#include "Random64.h"
+using namespace std;
+
+const int Lx=20;
+const double p=0.5;
+
+class LatticeGas{
+private:
+  int V[2]; //V[0] derecha V[1] izquierda
+  int n[Lx][2]; int nnew[Lx][2];
+  
+public:
+  LatticeGas(void);
+  void inicie(Crandom & ran64);
+  void show(bool ShowNew);
+  void colisiones(Crandom & ran64);
+  void adveccione(void);
+  
+};
+LatticeGas::LatticeGas(void){
+  V[0]=1; V[1]=-1;
+  for(int ix; ix<Lx;ix++)
+    {
+      n[ix][0]=n[ix][1]=0;  nnew[ix][0]=nnew[ix][1]=0;
+    }
+}
+void LatticeGas::inicie(Crandom & ran64){
+  int ix=(int) Lx*ran64.r();
+  int i=(int) 2*ran64.r();
+  n[ix][i]=1;
+}
+void LatticeGas::show(bool ShowNew){
+  for(int i=0; i<2;i++)
+    {
+      for(int ix=0; ix<Lx; ix++)
+	if(ShowNew)  std::cout << nnew[ix][i]; else std::cout << n[ix][i];
+      std::cout << std::endl;	
+    }
+}
+void latticeGas::colisiones(Crandom & ran64){
+  for(int ix=0;ix<Lx;ix++){//para cada celda
+    if(ran64.r()<p)
+      {nnew[ix][0]=n[ix][0]; nnew[ix][1]=n[ix][1];}
+    else{nnew[ix][0]=n[ix][1]; nnew[ix][1]=n[ix][0];}
+  }
+}
+void latticeGas::adveccione(void){
+
+
+}
+
+int main (void)
+{
+  LatticeGas Difusion;
+  Crandom ran64(1);
+
+  
+  Difusion.inicie(ran64);
+  Difusion.show(false);
+  
+  return 0;
+}

@@ -1,0 +1,17 @@
+#include <iostream>
+#include <cmath>
+#include "Vector.h"
+
+
+
+int main (void)
+{
+  Vector3D a;
+  a.cargue(1,2,3);
+  a.show();
+
+  
+
+
+  return 0;
+}

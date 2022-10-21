@@ -1,0 +1,5 @@
+all:
+	g++ -O2 electric_particle.cpp
+	clear
+	./a.out > datos.dat
+	gnuplot plot.gp

@@ -1,0 +1,18 @@
+
+all:
+	telnet horizons.jpl.nasa.gov 6775
+	tesla #object
+	e #ephemerides data
+	v #information of vectores
+	@0 #galaxy barycenter
+	eclip #reference frmae
+	2018-02-08 #start date
+	2018-02-09 #end date
+	1d
+	n\
+	J2000
+	1
+	1 
+	NO #csv format
+	NO #dt info
+	3 #output data table
