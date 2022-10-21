@@ -1,2 +1,2 @@
 # MSF
- Maestria/2020-II/Métodos de Simulación en Física
+ En el presente repositorio se encuentra todos los archivos de interés para el curso de Métodos de Simulación en Física.
