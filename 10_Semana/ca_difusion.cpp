@@ -1,3 +1,8 @@
+/*
+  Semana 10:
+  Simulacion de onda con perturbacion sinusoidal en el medio con Lattice-Boltzmann
+*/
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -90,9 +95,9 @@ double  LatticeBoltzmann::feq(double rho0, double Jx0, double Jy0, int i){
 //Start
 void LatticeBoltzmann::Start(double rho0, double Jx0, double Jy0){
   int ix,iy,i,n0;
-  for(ix=0; ix<Lx; ix++) //for each cell
+  for(ix=0; ix<Lx; ix++)    //para cada celda
     for(iy=0; iy<Ly; iy++)
-      for(i=0; i<Q; i++){ //on each direction
+      for(i=0; i<Q; i++){   //en cada direccion
     n0 = n(ix,iy,i);
     f[n0] = feq(rho0,Jx0,Jy0,i);
       }
@@ -100,11 +105,11 @@ void LatticeBoltzmann::Start(double rho0, double Jx0, double Jy0){
 //Colision
 void LatticeBoltzmann::Collision(void){
   int ix,iy,i,n0; double rho0,Jx0,Jy0;
-  for(ix=0;ix<Lx;ix++) //for each cell
+  for(ix=0;ix<Lx;ix++)      //para cada celda
     for(iy=0;iy<Ly;iy++){
-      //compute the macroscopic fields on the cell
+      //Calcule los campos macroscopicos en la celda
       rho0=rho(ix,iy,false); Jx0=Jx(ix,iy,false); Jy0=Jy(ix,iy,false);
-      for(i=0;i<Q;i++){ //for each velocity vector
+      for(i=0;i<Q;i++){     //para cada vector de velocidad
         n0 = n(ix,iy,i);
         fnew[n0] = UmUtau*f[n0]+Utau*feq(rho0,Jx0,Jy0,i);
       }
@@ -114,7 +119,7 @@ void LatticeBoltzmann::Collision(void){
 void LatticeBoltzmann::ImposeFields(int t){
   int i,ix,iy,n0;
   double lambda,omega,rho0,Jx0,Jy0; lambda=10; omega=2*M_PI/lambda*C;
-  //an oscillating source in the middle
+  //Fuente oscilatoria en el medio
   ix=Lx/2; iy=Ly/2;
   rho0=10*sin(omega*t); Jx0=Jx(ix,iy,false); Jy0=Jy(ix,iy,false);
   for(i=0;i<Q;i++){
@@ -125,17 +130,17 @@ void LatticeBoltzmann::ImposeFields(int t){
 //Adveccion
 void LatticeBoltzmann::Advection(void){
   int ix,iy,i,ixnext,iynext,n0,n0next;
-  for(ix=0;ix<Lx;ix++) //for each cell
+  for(ix=0;ix<Lx;ix++)      //para cada celda
     for(iy=0;iy<Ly;iy++)
-      for(i=0;i<Q;i++){ //on each direction
+      for(i=0;i<Q;i++){     //en cada direccion
     ixnext=(ix+Vx[i]+Lx)%Lx; iynext=(iy+Vy[i]+Ly)%Ly;
     n0=n(ix,iy,i); n0next=n(ixnext,iynext,i);
-    f[n0next]=fnew[n0]; //periodic boundaries
+    f[n0next]=fnew[n0];     //fronteras periodicas
       }
 }
 //Print
 void LatticeBoltzmann::Print(const char * NameFile){
-  ofstream MyFile(NameFile); double rho0; int ix,iy;
+  ofstream MyFile(NameFile); double rho0; int ix, iy;
   for(ix=0;ix<Lx;ix++){
     for(iy=0;iy<Ly;iy++){
       rho0=rho(ix,iy,true);
