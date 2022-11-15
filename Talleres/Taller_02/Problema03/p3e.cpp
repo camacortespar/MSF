@@ -236,7 +236,7 @@ int main(void){
   LatticeBoltzmann Air;
   int i;
   int t, tmax = 100; double dt = 1.0;
-  double Ufan0;
+  double Ufan0 = 0.1;
   double omega = 2*M_PI/1000;
   int ixc = 128, iyc = 32, R = 8;
   double xc, yc; 
@@ -266,9 +266,9 @@ int main(void){
       }
     }
     //Numero de Reynolds y coeficiente de arrastre
-    Re = 2*R*Ufan0/nu_fluido; Ca = (2*Fx)/(rho_fluido*A*Ufan0*Ufan0);
-    //cout<<Re<<"\t"<<Ca<<endl;
-    cout<<omega<<"\t"<<-Fy<<endl;
+    Re = A*Ufan0/nu_fluido; Ca = (2*Fx)/(rho_fluido*A*Ufan0*Ufan0);
+    cout<<Re<<"\t"<<Ca<<endl;
+    //cout<<omega<<"\t"<<-Fy<<endl;
   }
   //Air.Print("Air.dat", Ufan0);
   return 0;
