@@ -20,20 +20,18 @@ const double UmUtau = 1-Utau;
 
 //Propiedades del fluido
 const double rho_fluido = 1.0;
-const double nu_fluido = (tau-0.5)/3.0;         //viscosidad cinematica
-const double eta_fluido = rho_fluido*nu_fluido;             //viscosidad dinamica 
+const double nu_fluido = (tau-0.5)/3.0;           //viscosidad cinematica
+const double eta_fluido = rho_fluido*nu_fluido;   //viscosidad dinamica 
 
 //-----Clase LatticeBoltzmann------
 class LatticeBoltzmann{
 private:
-  double w[Q];        //pesos por direccion
-  int Vx[Q], Vy[Q];   //vectores de velocidad
-  double *f, *fnew;   //funciones de distribucion - * es un apuntador que lo lleva a la direccion de memoria
-  double sigmaxx[Lx][Ly], sigmayy[Lx][Ly], sigmaxy[Lx][Ly];
+  double w[Q];                                                //pesos por direccion
+  int Vx[Q], Vy[Q];                                           //vectores de velocidad
+  double f[Lx][Ly][Q], fnew[Lx][Ly][Q];                       //funciones de distribucion
+  double sigmaxx[Lx][Ly], sigmayy[Lx][Ly], sigmaxy[Lx][Ly];   //tensor de esfuerzos
 public:
   LatticeBoltzmann(void);
-  ~LatticeBoltzmann(void);
-  int n(int ix, int iy, int i){return (ix*Ly+iy)*Q+i;};   //indice de las celdas
   double rho(int ix, int iy, bool UseNew);
   double Jx(int ix, int iy, bool UseNew);
   double Jy(int ix, int iy, bool UseNew);
@@ -58,37 +56,27 @@ LatticeBoltzmann::LatticeBoltzmann(void){
   Vy[0] = 0;  Vy[1] = 0;  Vy[2] = 1;  Vy[3] = 0;  Vy[4] = -1;
   Vx[5] = 1;  Vx[6] = -1; Vx[7] = -1; Vx[8] = 1;
   Vy[5] = 1;  Vy[6] = 1;  Vy[7] = -1; Vy[8] = -1;
-  //Crea arrays dinamicos
-  int ArraySize = Lx*Ly*Q;
-  f = new double [ArraySize];  fnew = new double [ArraySize];
-}
-//Destructor
-LatticeBoltzmann::~LatticeBoltzmann(void){
-  delete[] f;  delete[] fnew;
 }
 //Rho
 double LatticeBoltzmann::rho(int ix, int iy, bool UseNew){
-  double sum; int i, n0;
+  double sum; int i;
   for(sum=0, i=0; i<Q; i++){
-    n0 = n(ix,iy,i);
-    if(UseNew) sum += fnew[n0]; else sum += f[n0];
+    if(UseNew) sum += fnew[ix][iy][i]; else sum += f[ix][iy][i];
   }
   return sum;
 } 
 //Componentes del vector J
 double LatticeBoltzmann::Jx(int ix, int iy, bool UseNew){
-  double sum; int i, n0;
+  double sum; int i;
   for(sum=0, i=0; i<Q; i++){
-    n0 = n(ix,iy,i);
-    if(UseNew) sum += Vx[i]*fnew[n0]; else sum += Vx[i]*f[n0];
+    if(UseNew) sum += Vx[i]*fnew[ix][iy][i]; else sum += Vx[i]*f[ix][iy][i];
   }
   return sum;
 }
 double LatticeBoltzmann::Jy(int ix, int iy, bool UseNew){
-  double sum; int i, n0;
+  double sum; int i;
   for(sum=0, i=0; i<Q; i++){
-    n0 = n(ix,iy,i);
-    if(UseNew) sum += Vy[i]*fnew[n0]; else sum += Vy[i]*f[n0];
+    if(UseNew) sum += Vy[i]*fnew[ix][iy][i]; else sum += Vy[i]*f[ix][iy][i];
   }
   return sum;
 }
@@ -99,40 +87,38 @@ double  LatticeBoltzmann::feq(double rho0, double Ux0, double Uy0, int i){
   } 
 //Inicie
 void LatticeBoltzmann::Start(double rho0, double Ux0, double Uy0){
-  int ix, iy, i, n0;
+  int ix, iy, i;
   for(ix = 0; ix < Lx; ix++)    //para cada celda
     for(iy = 0; iy < Ly; iy++)
       for(i = 0; i < Q; i++){   //en cada direccion
-        n0 = n(ix,iy,i);
-        f[n0] = feq(rho0,Ux0,Uy0,i);
+        f[ix][iy][i] = feq(rho0,Ux0,Uy0,i);
       }
 }  
 //Colision
 void LatticeBoltzmann::Collision(void){
-  int ix, iy, i, n0; double rho0, Ux0, Uy0;
+  int ix, iy, i; double rho0, Ux0, Uy0;
   for(ix = 0; ix < Lx; ix++)      //para cada celda
     for(iy = 0; iy < Ly; iy++){
       //Calcule los campos macroscopicos en la celda
       rho0 = rho(ix,iy,false); Ux0 = Jx(ix,iy,false)/rho0; Uy0 = Jy(ix,iy,false)/rho0;
       for(i = 0; i < Q; i++){     //para cada vector de velocidad
-        n0 = n(ix,iy,i);
-        fnew[n0] = UmUtau*f[n0]+Utau*feq(rho0,Ux0,Uy0,i);
+        fnew[ix][iy][i] = UmUtau*f[ix][iy][i]+Utau*feq(rho0,Ux0,Uy0,i);
       }
     }  
 }
 //Imponer campos, en este caso se impone geometría de ventilador + obstaculo
 void LatticeBoltzmann::ImposeFields(double Ufan){
-  int i, ix, iy, n0;
+  int i, ix, iy;
   double rho0; int ixc = 128, iyc = 32, R = 8; double R2 = R*R;   //ctes que definen obstaculo circular
   for(ix = 0; ix < Lx ; ix++)      //para cada celda
     for(iy = 0; iy < Ly; iy++){
       rho0 = rho(ix, iy, false);
       //Ventilador
       if(ix == 0)
-        for(i = 0; i < Q; i++){n0 = n(ix,iy,i); fnew[n0] = feq(rho0,Ufan,0,i);}
+        for(i = 0; i < Q; i++){fnew[ix][iy][i] = feq(rho0,Ufan,0,i);}
       //Obstaculo
       else if(pow((ix-ixc),2)+pow((iy-iyc),2) <=R2)
-        for(i = 0; i < Q; i++){n0 = n(ix,iy,i); fnew[n0] = feq(rho0,0,0,i);}
+        for(i = 0; i < Q; i++){fnew[ix][iy][i] = feq(rho0,0,0,i);}
       //Hay que agregar un punto de perturbacion para romper la isotropia
       //else if(ix==ixc && iy==iyc+R+1)
       //  for(i=0;i<Q;i++){n0=n(ix,iy,i); fnew[n0]=feq(rho0,0,0,i);}
@@ -140,13 +126,11 @@ void LatticeBoltzmann::ImposeFields(double Ufan){
 }
 //Adveccion
 void LatticeBoltzmann::Advection(void){
-  int ix, iy, i, ixnext, iynext, n0, n0next;
+  int ix, iy, i;
   for(ix = 0; ix < Lx; ix++)      //para cada celda
     for(iy = 0; iy < Ly; iy++)
       for(i = 0; i < Q; i++){     //en cada direccion
-        ixnext = (ix+Vx[i]+Lx)%Lx; iynext = (iy+Vy[i]+Ly)%Ly;
-        n0 = n(ix,iy,i); n0next = n(ixnext,iynext,i);
-        f[n0next] = fnew[n0];       //fronteras periodicas
+        f[(ix+Vx[i]+Lx)%Lx][(iy+Vy[i]+Ly)%Lx][i]= fnew[ix][iy][i];       //fronteras periodicas
       }
 }
 //Tensor de esfuerzos
@@ -252,15 +236,15 @@ int main(void){
   LatticeBoltzmann Air;
   int i;
   int t, tmax = 100; double dt = 1.0;
-  double Ufan0 = 0.1;
+  double Ufan0;
   int ixc = 128, iyc = 32, R = 8;
   double xc, yc; 
   int N = 24;
   double dAx, dAy, dphi = 2*M_PI/N;  //Componentes del dA
   double fx_aux, fy_aux, Fx, Fy;
-  double Re, Ca;
+  double Re, Ca, A = 2*R;
   
-  for(Ufan0 = 0.0; Ufan0 < 0.5; Ufan0 += 0.01){
+  for(Ufan0 = 0.1; Ufan0 <= 4.1; Ufan0 += 0.1){
     //Inicie
     Air.Start(rho_fluido,Ufan0,0);
     //Evolucione
@@ -271,17 +255,20 @@ int main(void){
       Air.Sigmaxx(rho_fluido/3.0,eta_fluido,dt);
       Air.Sigmayy(rho_fluido/3.0,eta_fluido,dt);
       Air.Sigmaxy(rho_fluido/3.0,eta_fluido,dt);
-      for(Fx = 0, Fy = 0, i = 1; i <= N; i++){
-        xc = ixc+R*cos(dphi*i);  yc = iyc+R*sin(dphi*i);        //encuentre el punto central de dA
-        dAx = R*dphi*cos(dphi*i);   dAy = R*dphi*sin(dphi*i);
-        Air.Interpol(xc, yc, dAx, dAy, fx_aux, fy_aux);
-        Fx += fx_aux; Fy += fy_aux;
+      if(t = tmax-dt){
+        for(Fx = 0, Fy = 0, i = 1; i <= N; i++){
+          xc = ixc+R*cos(dphi*i);  yc = iyc+R*sin(dphi*i);        //encuentre el punto central de dA
+          dAx = R*dphi*cos(dphi*i);   dAy = R*dphi*sin(dphi*i);
+          Air.Interpol(xc, yc, dAx, dAy, fx_aux, fy_aux);
+          Fx += fx_aux; Fy += fy_aux;
+        }
       }
-      //cout<<Fx<<"\t"<<Fy<<endl;
     }
     //Numero de Reynolds y coeficiente de arrastre
-    Re = 2*R*Ufan0/nu_fluido; Ca = (Fx)/(rho_fluido*R*Ufan0*Ufan0);
-    cout<<Re<<"\t"<<Ca<<endl;
+    Re = 2*R*Ufan0/nu_fluido; Ca = (2*Fx)/(rho_fluido*A*Ufan0*Ufan0);
+    //cout<<Re<<"\t"<<Ca<<endl;
+    //cout<<Ufan0<<"\t"<<Fy<<endl;
+    cout<<Fy<<"\t"<<Fx<<endl;
   }
   //Air.Print("Air.dat", Ufan0);
   return 0;

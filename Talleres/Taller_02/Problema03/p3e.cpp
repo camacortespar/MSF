@@ -20,16 +20,16 @@ const double UmUtau = 1-Utau;
 
 //Propiedades del fluido
 const double rho_fluido = 1.0;
-const double nu_fluido = (tau-0.5)/3.0;         //viscosidad cinematica
-const double eta_fluido = rho_fluido*nu_fluido;             //viscosidad dinamica 
+const double nu_fluido = (tau-0.5)/3.0;           //viscosidad cinematica
+const double eta_fluido = rho_fluido*nu_fluido;   //viscosidad dinamica 
 
 //-----Clase LatticeBoltzmann------
 class LatticeBoltzmann{
 private:
-  double w[Q];        //pesos por direccion
-  int Vx[Q], Vy[Q];   //vectores de velocidad
-  double f[Lx][Ly][Q], fnew[Lx][Ly][Q];
-  double sigmaxx[Lx][Ly], sigmayy[Lx][Ly], sigmaxy[Lx][Ly];
+  double w[Q];                                                //pesos por direccion
+  int Vx[Q], Vy[Q];                                           //vectores de velocidad
+  double f[Lx][Ly][Q], fnew[Lx][Ly][Q];                       //funciones de distribucion
+  double sigmaxx[Lx][Ly], sigmayy[Lx][Ly], sigmaxy[Lx][Ly];   //tensor de esfuerzos
 public:
   LatticeBoltzmann(void);
   double rho(int ix, int iy, bool UseNew);
@@ -38,7 +38,7 @@ public:
   double feq(double rho0, double Ux0, double Uy0, int i);
   void Start(double rho0, double Ux0, double Uy0);
   void Collision(void);
-  void ImposeFields(double Ufan);
+  void ImposeFields(double Ufan, double omega);
   void Advection(void);
   void Sigmaxx(double p0, double eta0, double dt);
   void Sigmayy(double p0, double eta0, double dt);
@@ -107,7 +107,7 @@ void LatticeBoltzmann::Collision(void){
     }  
 }
 //Imponer campos, en este caso se impone geometría de ventilador + obstaculo
-void LatticeBoltzmann::ImposeFields(double Ufan){
+void LatticeBoltzmann::ImposeFields(double Ufan, double omega){
   int i, ix, iy;
   double rho0; int ixc = 128, iyc = 32, R = 8; double R2 = R*R;   //ctes que definen obstaculo circular
   for(ix = 0; ix < Lx ; ix++)      //para cada celda
@@ -118,7 +118,7 @@ void LatticeBoltzmann::ImposeFields(double Ufan){
         for(i = 0; i < Q; i++){fnew[ix][iy][i] = feq(rho0,Ufan,0,i);}
       //Obstaculo
       else if(pow((ix-ixc),2)+pow((iy-iyc),2) <=R2)
-        for(i = 0; i < Q; i++){fnew[ix][iy][i] = feq(rho0,0,0,i);}
+        for(i = 0; i < Q; i++){fnew[ix][iy][i] = feq(rho0,-omega*(iy-iyc),omega*(ix-ixc),i);}
       //Hay que agregar un punto de perturbacion para romper la isotropia
       //else if(ix==ixc && iy==iyc+R+1)
       //  for(i=0;i<Q;i++){n0=n(ix,iy,i); fnew[n0]=feq(rho0,0,0,i);}
@@ -237,35 +237,38 @@ int main(void){
   int i;
   int t, tmax = 100; double dt = 1.0;
   double Ufan0;
+  double omega = 2*M_PI/1000;
   int ixc = 128, iyc = 32, R = 8;
   double xc, yc; 
   int N = 24;
   double dAx, dAy, dphi = 2*M_PI/N;  //Componentes del dA
   double fx_aux, fy_aux, Fx, Fy;
-  double Re, Ca;
+  double Re, Ca, A = 2*R, Cm = 1.0; 
   
-  for(Ufan0 = 0.1; Ufan0 <= 10; Ufan0 += 0.1){
+  for(omega = 0.01; omega <= 0.3 ; omega += 0.01){
     //Inicie
     Air.Start(rho_fluido,Ufan0,0);
     //Evolucione
     for(t = 0; t < tmax; t += dt){
       Air.Collision();
-      Air.ImposeFields(Ufan0);
+      Air.ImposeFields(Ufan0, omega);
       Air.Advection();
       Air.Sigmaxx(rho_fluido/3.0,eta_fluido,dt);
       Air.Sigmayy(rho_fluido/3.0,eta_fluido,dt);
       Air.Sigmaxy(rho_fluido/3.0,eta_fluido,dt);
-      for(Fx = 0, Fy = 0, i = 1; i <= N; i++){
-        xc = ixc+R*cos(dphi*i);  yc = iyc+R*sin(dphi*i);        //encuentre el punto central de dA
-        dAx = R*dphi*cos(dphi*i);   dAy = R*dphi*sin(dphi*i);
-        Air.Interpol(xc, yc, dAx, dAy, fx_aux, fy_aux);
-        Fx += fx_aux; Fy += fy_aux;
+      if(t=tmax-dt){
+        for(Fx = 0, Fy = 0, i = 1; i <= N; i++){
+            xc = ixc+R*cos(dphi*i);  yc = iyc+R*sin(dphi*i);        //encuentre el punto central de dA
+            dAx = R*dphi*cos(dphi*i);   dAy = R*dphi*sin(dphi*i);
+            Air.Interpol(xc, yc, dAx, dAy, fx_aux, fy_aux);
+            Fx += fx_aux; Fy += fy_aux;
+        }
       }
-      //cout<<Fx<<"\t"<<Fy<<endl;
     }
     //Numero de Reynolds y coeficiente de arrastre
-    Re = 2*R*Ufan0/nu_fluido; Ca = (Fx)/(rho_fluido*R*Ufan0*Ufan0);
-    cout<<Re<<"\t"<<Ca<<endl;
+    Re = 2*R*Ufan0/nu_fluido; Ca = (2*Fx)/(rho_fluido*A*Ufan0*Ufan0);
+    //cout<<Re<<"\t"<<Ca<<endl;
+    cout<<omega<<"\t"<<-Fy<<endl;
   }
   //Air.Print("Air.dat", Ufan0);
   return 0;
