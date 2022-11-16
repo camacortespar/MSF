@@ -236,8 +236,8 @@ int main(void){
   int t, tmax = 100; double dt = 1.0;   //tiempos de simulacion
   double Ufan0;                         //propiedades de ventilador + cilindro
   int ixc = 128, iyc = 32, R = 8;
-  double xc, yc;                        //division en N elementos planos del cilindro 
-  int N = 24;
+  double xc, yc;                       
+  int N = 24;                           //division en N elementos planos del cilindro 
   double dAx, dAy, dphi = 2*M_PI/N;     //componentes del dA
   double fx_aux, fy_aux, Fx, Fy;
   double Re, Ca, A = 2*R; 
@@ -253,7 +253,7 @@ int main(void){
       Air.Sigmaxx(rho_fluido/3.0,eta_fluido,dt);
       Air.Sigmayy(rho_fluido/3.0,eta_fluido,dt);
       Air.Sigmaxy(rho_fluido/3.0,eta_fluido,dt);
-      if(t=tmax-dt){
+     if(t=tmax-dt){
         for(Fx=0, Fy=0, i=1; i<=N; i++){
           xc = ixc+R*cos(dphi*i);  yc = iyc+R*sin(dphi*i);        //encuentre el punto central de dA
           dAx = R*dphi*cos(dphi*i);   dAy = R*dphi*sin(dphi*i);   //componentes de dA
@@ -264,9 +264,9 @@ int main(void){
     }
     //Numero de Reynolds y coeficiente de arrastre
     Re = A*Ufan0/nu_fluido; Ca = (2*Fx)/(rho_fluido*A*Ufan0*Ufan0);
-    cout<<Re<<"\t"<<Ca<<endl;
-    //cout<<Ufan0<<"\t"<<Fy<<endl;
-    //cout<<t<<"\t"<<Fy<<endl;
+    //cout<<Re<<"\t"<<Ca<<endl;
+    cout<<Fy<<"\t"<<t<<endl;
+    
   }
   //Air.Print("Air.dat", Ufan0);
   return 0;
